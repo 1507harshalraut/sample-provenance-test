@@ -80,6 +80,43 @@ def resolve_commit(repo: Path, ref: str) -> str:
     return run_git(repo, "rev-parse", ref).strip()
 
 
+def _tool_breakdown(manifest: dict[str, Any]) -> list[tuple[str, int]]:
+    """Aggregate line counts by readable attribution label."""
+    counts: dict[str, int] = {}
+
+    for file_entry in manifest.get("files", []):
+        for line in file_entry.get("lines", []):
+            origin = line.get("origin", "unknown")
+            tool = line.get("tool") or ""
+
+            if origin == "human_typed":
+                label = "Human typed"
+            elif origin == "ai_generated":
+                label = f"AI Generated ({tool or 'Unknown'})"
+            elif origin == "ai_pasted":
+                label = f"AI Pasted ({tool or 'browser LLM'})"
+            elif origin == "pasted":
+                label = "Human pasted (clipboard)"
+            else:
+                label = origin.replace("_", " ").title()
+
+            counts[label] = counts.get(label, 0) + 1
+
+    return sorted(counts.items(), key=lambda x: (-x[1], x[0]))
+
+
+def _interesting_lines(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    """Lines that are not plain human typed — for ChatGPT/Copilot visibility."""
+    picked: list[dict[str, Any]] = []
+    for file_entry in manifest.get("files", []):
+        path = file_entry.get("path", "")
+        for line in file_entry.get("lines", []):
+            origin = line.get("origin", "")
+            if origin in ("ai_generated", "ai_pasted", "pasted"):
+                picked.append({**line, "file": path})
+    return picked[:30]
+
+
 def build_report(manifest: dict[str, Any], sig_ok: bool) -> str:
     commit = manifest.get("commit", "")[:12]
     author = manifest.get("author", {})
@@ -122,6 +159,27 @@ def build_report(manifest: dict[str, Any], sig_ok: bool) -> str:
             f"| {stats.get('pasted', 0)} |"
         )
 
+    lines_out.extend(["", "### Attribution by tool", ""])
+    lines_out.append("| Source | Lines |")
+    lines_out.append("|--------|-------|")
+    for label, count in _tool_breakdown(manifest):
+        lines_out.append(f"| {label} | {count} |")
+
+    ai_lines = _interesting_lines(manifest)
+    if ai_lines:
+        lines_out.extend(["", "### AI & paste lines (not just first 15)", ""])
+        lines_out.append("| File | Line | Origin | Tool | Preview |")
+        lines_out.append("|------|------|--------|------|---------|")
+        for entry in ai_lines:
+            preview = (entry.get("preview") or "").replace("|", "\\|").replace("\ufeff", "")[:50]
+            lines_out.append(
+                f"| `{entry.get('file', '')}` "
+                f"| {entry.get('line', '')} "
+                f"| {entry.get('origin', '')} "
+                f"| {entry.get('tool', '') or '-'} "
+                f"| `{preview}` |"
+            )
+
     lines_out.extend(["", "### Sample line attributions (first 15 lines per file)", ""])
     for f in files:
         path = f.get("path", "")
@@ -133,7 +191,7 @@ def build_report(manifest: dict[str, Any], sig_ok: bool) -> str:
         lines_out.append("| Line | Origin | Tool | Preview |")
         lines_out.append("|------|--------|------|---------|")
         for entry in file_lines:
-            preview = (entry.get("preview") or "").replace("|", "\\|")[:50]
+            preview = (entry.get("preview") or "").replace("|", "\\|").replace("\ufeff", "")[:50]
             lines_out.append(
                 f"| {entry.get('line', '')} "
                 f"| {entry.get('origin', '')} "
