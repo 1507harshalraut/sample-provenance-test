@@ -1,18 +1,8 @@
-﻿# AI Provenance full test file
-# Run through all scenarios in the test checklist, then commit.
+﻿x=1
+y=2
+z=x+y
+print(z)
 
-def hello():
-    print("human typed baseline")
-
-
-x = 1
-# Plugin Development
-
-
-def greet():
-    print("Hello, World!")
-
-greet()
 
 
 class Task:
@@ -23,35 +13,74 @@ class Task:
         self.assignee = assignee
 
 
-def create_task(task_id, title):
-    return Task(task_id, title)
+
+def greet():
+    print("Hello, World!")
 
 
-def fib(n):
-    a, b = 0, 1
-    seq = []
-    for _ in range(n):
-        seq.append(a)
-        a, b = b, a + b
-    return seq
+def add(a, b):
+    return a + b
 
 
-def calculator(a, b, op):
-    ops = {
-        "+": lambda x, y: x + y,
-        "-": lambda x, y: x - y,
-        "*": lambda x, y: x * y,
-        "/": lambda x, y: "undefined" if y == 0 else x / y,
-        "%": lambda x, y: "undefined" if y == 0 else x % y,
-    }
-    return ops.get(op, lambda *_: "unsupported operation")(a, b)
+def subtract(a, b):
+    return a - b
 
 
-def main():
-    print("Fibonacci 10:", fib(10))
-    print("12 + 5 =", calculator(12, 5, "+"))
-    print("12 * 5 =", calculator(12, 5, "*"))
+def multiply(a, b):
+    return a * b
+
+
+def divide(a, b):
+    if b == 0:
+        raise ValueError("Cannot divide by zero")
+    return a / b
+
+
+def calculator():
+    print("\nSimple Calculator")
+    while True:
+        print("\nChoose an operation:")
+        print("1. Add")
+        print("2. Subtract")
+        print("3. Multiply")
+        print("4. Divide")
+        print("5. Exit")
+
+        choice = input("Enter choice (1-5): ")
+        if choice == "5":
+            print("Exiting calculator.")
+            break
+
+        if choice not in {"1", "2", "3", "4"}:
+            print("Invalid choice. Please choose a number between 1 and 5.")
+            continue
+
+        try:
+            a = float(input("Enter first number: "))
+            b = float(input("Enter second number: "))
+        except ValueError:
+            print("Invalid input. Please enter numeric values.")
+            continue
+
+        try:
+            if choice == "1":
+                result = add(a, b)
+            elif choice == "2":
+                result = subtract(a, b)
+            elif choice == "3":
+                result = multiply(a, b)
+            else:
+                result = divide(a, b)
+        except ValueError as err:
+            print(err)
+            continue
+
+        print(f"Result: {result}")
 
 
 if __name__ == "__main__":
-    main()
+    greet()
+    calculator()
+
+
+
