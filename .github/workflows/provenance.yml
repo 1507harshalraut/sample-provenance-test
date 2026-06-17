@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [master, main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,9 +31,11 @@ jobs:
 
       - name: Fetch provenance notes from remote
         run: |
-          git fetch origin refs/notes/provenance:refs/notes/provenance 2>/dev/null || true
-          echo "Notes on this clone:"
-          git notes --ref=provenance list || true
+          echo "Remote provenance ref:"
+          git ls-remote origin refs/notes/provenance
+          git fetch --force origin +refs/notes/provenance:refs/notes/provenance
+          echo "Notes after fetch:"
+          git notes --ref=provenance list | tail -20
 
       - name: Verify provenance and build report
         id: verify
